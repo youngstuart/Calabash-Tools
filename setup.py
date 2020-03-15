@@ -3,11 +3,9 @@ from urllib.request import urlopen
 from zipfile import ZipFile
 from io import BytesIO
 
-# Dev paths, replace with following later
-#os.chdir(os.path.dirname(__file__))
-#cwd = os.getcwd()
-userHome = os.path.expanduser("~")
-cwd = os.path.join(userHome, 'AppData', 'Local','cb_temp')
+
+os.chdir(os.path.dirname(__file__))
+cwd = os.getcwd()
 
 if not os.path.exists(cwd):
     os.mkdir(cwd)
