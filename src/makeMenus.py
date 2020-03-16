@@ -1,7 +1,8 @@
 import pymel.core as pm
 # menuAction may change to be more specific, ex pipeman will be its own module
-import menuActions
-
+import menuActions, matlib_ui
+reload(menuActions)
+reload(matlib_ui)
 def _null(*args):
     pass
 
@@ -60,6 +61,7 @@ class cbtools_shelf(_shelf):
         self.addButton(label='Pipeman', command=menuActions.pipeman)
         self.addButton(label='Publish', command=menuActions.publishAsset)
         self.addButton(label='VRToolbox', command=menuActions.vrayToolbox)
+        self.addButton(label='MatLib', command=matlib_ui.showLib)
 
 def makeMenu():
     main_window = pm.language.melGlobals['gMainWindow']
@@ -74,6 +76,7 @@ def makeMenu():
     pm.menuItem(label='Pipeman', command=menuActions.pipeman)
     pm.menuItem(label='Publish Asset', command=menuActions.publishAsset)
     pm.menuItem(label='VRay Toolbox', command= menuActions.vrayToolbox)
+    pm.menuItem(label='MatLib', command=matlib_ui.showLib)
 
 makeMenu()
 cbtools_shelf()
