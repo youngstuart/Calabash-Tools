@@ -78,5 +78,3 @@ def makeMenu():
     pm.menuItem(label='VRay Toolbox', command= menuActions.vrayToolbox)
     pm.menuItem(label='MatLib', command=matlib_ui.showLib)
 
-makeMenu()
-cbtools_shelf()
