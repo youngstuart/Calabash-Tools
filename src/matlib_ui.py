@@ -11,92 +11,7 @@ import maya.OpenMayaUI as om
 def maya_main_window():
     main_window_ptr = om.MQtUtil.mainWindow()
     return wrapInstance(long(main_window_ptr), QtWidgets.QWidget)
-
-
-class FlowLayout(QtWidgets.QLayout):
-    def __init__(self, parent=None, margin=0, spacing=-1):
-        super(FlowLayout, self).__init__(parent)
-
-        if parent is not None:
-            self.setMargin(margin)
-
-        self.setSpacing(spacing)
-
-        self.itemList = []
-
-    def __del__(self):
-        item = self.takeAt(0)
-        while item:
-            item = self.takeAt(0)
-
-    def addItem(self, item):
-        self.itemList.append(item)
-
-    def count(self):
-        return len(self.itemList)
-
-    def itemAt(self, index):
-        if index >= 0 and index < len(self.itemList):
-            return self.itemList[index]
-
-        return None
-
-    def takeAt(self, index):
-        if index >= 0 and index < len(self.itemList):
-            return self.itemList.pop(index)
-
-        return None
-
-    def expandingDirections(self):
-        return QtCore.Qt.Orientations(QtCore.Qt.Orientation(0))
-
-    def hasHeightForWidth(self):
-        return True
-
-    def heightForWidth(self, width):
-        height = self.doLayout(QtCore.QRect(0, 0, width, 0), True)
-        return height
-
-    def setGeometry(self, rect):
-        super(FlowLayout, self).setGeometry(rect)
-        self.doLayout(rect, False)
-
-    def sizeHint(self):
-        return self.minimumSize()
-
-    def minimumSize(self):
-        size = QtCore.QSize()
-
-        for item in self.itemList:
-            size = size.expandedTo(item.minimumSize())
-
-        size += QtCore.QSize(2 * self.contentsMargins().top(), 2 * self.contentsMargins().top())
-        return size
-
-    def doLayout(self, rect, testOnly):
-        x = rect.x()
-        y = rect.y()
-        lineHeight = 0
-
-        for item in self.itemList:
-            wid = item.widget()
-            spaceX = self.spacing() + wid.style().layoutSpacing(QtGui.QSizePolicy.PushButton, QtGui.QSizePolicy.PushButton, QtCore.Qt.Horizontal)
-            spaceY = self.spacing() + wid.style().layoutSpacing(QtGui.QSizePolicy.PushButton, QtGui.QSizePolicy.PushButton, QtCore.Qt.Vertical)
-            nextX = x + item.sizeHint().width() + spaceX
-            if nextX - spaceX > rect.right() and lineHeight > 0:
-                x = rect.x()
-                y = y + lineHeight + spaceY
-                nextX = x + item.sizeHint().width() + spaceX
-                lineHeight = 0
-
-            if not testOnly:
-                item.setGeometry(QtCore.QRect(QtCore.QPoint(x, y), item.sizeHint()))
-
-            x = nextX
-            lineHeight = max(lineHeight, item.sizeHint().height())
-
-        return y + lineHeight - rect.y()
-              
+         
 class matlib_ui(QtWidgets.QDialog):
     def __init__(self, parent=maya_main_window()):
         super(matlib_ui, self).__init__(parent)
@@ -108,24 +23,85 @@ class matlib_ui(QtWidgets.QDialog):
         self.setWindowFlags(self.windowFlags() ^ QtCore.Qt.WindowContextHelpButtonHint)
         self.create_widgets()
         self.create_layout()
+    
+    def fixPath(path):
+        return path.replace('\\','/')
+    
+    def getProjInfo():
+        project = fixPath(pm.workspace.getPath())
+        projInfo = {
+        'project':project,
+        'images':fixPath(os.path.join(project, 'images')),
+        }
+        return projInfo
+    
+    def getMaterials(self):
+        projInfo = getProjInfo()
+        mtlLib_path = fixPath(os.path.join(projInfo['images'], 'mtl_lib'))
+        mtlLib = {'path':mtlLib_path,'materials':{}}
+        materials = [(dir, os.path.join(mtlLib_path, dir)) for dir in os.listdir(mtlLib_path) if os.path.isdir(os.path.join(mtlLib_path, dir))]
         
+        for material, path in materials:
+            images = [img for img in os.listdir(path) if os.path.isfile(os.path.join(path, img))]
+            mtlLib['materials'][material] = {'aovs':[]}
+            for img in images:
+                if len(img.split('.')) == 2:
+                    mtlLib['materials'][material]['beauty'] = img
+                else:
+                    mtlLib['materials'][material]['aovs'].append(img)
+        return mtlLib
+    
+    def make_thumbs(self, materials):
+        thumbs = []
+        for material in materials['materials']:
+            img = os.path.join(materials['path'], material, materials['materials'][material]['beauty'])
+            '''
+            icon = QtGui.QIcon(img)
+            self.btn = QtWidgets.QPushButton(material)
+            self.btn.setIcon(icon)
+            #self.btn.setIconSize(QtCore.QSize(200,200))
+            self.btn.clicked.connect(lambda: self.printMe(img))
+            thumbs.append(self.btn)
+            '''
             
+            image = QtGui.QImage(img)
+            image = image.scaled(200,200)
+            pixmap = QtGui.QPixmap()
+            pixmap.convertFromImage(image)
+            self.image_label = QtWidgets.QLabel(material)
+            self.image_label.setPixmap(pixmap)
+            thumbs.append(self.image_label)
+            
+            
+        return thumbs
+    def printMe(self, path):
+        print(path)
     def create_widgets(self):
         self.navButton = QtWidgets.QPushButton("Navigation")
+
         self.previewButton = QtWidgets.QPushButton("Preview")
-        
-        
+                
     def create_layout(self):
+        projInfo = getProjInfo()
+        mtlLib = os.walk(os.path.join(projInfo['images'], 'mtl_lib'))
+
         main_layout = QtWidgets.QHBoxLayout(self)
         
+        gallery_layout = QtWidgets.QGridLayout()
+        
+        
+        stupid_grid = [(0,0), (0,1), (1,0), (1,1)]
+        thumbs = self.make_thumbs(self.getMaterials())
+
+        for n in range(len(thumbs)):
+
+            row, column = stupid_grid[n]
+            gallery_layout.addWidget(thumbs[n], row, column)
+
         nav_layout = QtWidgets.QVBoxLayout()
         nav_layout.addWidget(self.navButton)
         
 
-        gallery_layout = FlowLayout()
-
-        gallery_layout.addWidget(QtWidgets.QPushButton(QtGui.QIcon("C:\Users\guest1\Desktop\scratch\cbtools2\Calabash-Tools\src\icons"), ''))
-        main_layout.addLayout(gallery_layout)
         preview_layout = QtWidgets.QVBoxLayout()
         preview_layout.addWidget(self.previewButton)
         
